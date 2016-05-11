@@ -38,7 +38,7 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void run() {
             BTAdapter.startLeScan(leScanCallback);
-            mHandler.postDelayed(this, 5000);
+            mHandler.postDelayed(this, 1000);
             //BTAdapter.stopLeScan(leScanCallback);
         }
     };
