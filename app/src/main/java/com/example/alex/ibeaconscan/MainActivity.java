@@ -12,7 +12,13 @@ import android.util.Log;
 import android.widget.TextView;
 import org.altbeacon.beacon.*;
 
+import java.net.InetSocketAddress;
 import java.util.Collection;
+
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.net.InetAddress;
+import java.net.Socket;
 
 public class MainActivity extends AppCompatActivity implements BeaconConsumer{
     protected static final String TAG = "MainActivity";
@@ -25,10 +31,18 @@ public class MainActivity extends AppCompatActivity implements BeaconConsumer{
     private int Rssi, Major, Minor;
     private String Uuid;
 
+    private String address = "140.134.226.182";
+    private int port = 8765;
+    Socket clientSocket = new Socket();
+    DataOutputStream outToServer;
+    Thread thread;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        thread = new Thread(sendtoServer);
+        thread.start();
 
         RssiText = (TextView) findViewById(R.id.RssiText);
         UuidText = (TextView) findViewById(R.id.UuidText);
@@ -79,16 +93,31 @@ public class MainActivity extends AppCompatActivity implements BeaconConsumer{
 
     }
 
-
-
-    public Runnable scanRunnable = new Runnable()
-    {
+    public Runnable sendtoServer = new Runnable() {
+        @Override
+        public void run() {
+            try {
+                clientSocket = new Socket(InetAddress.getByName(address), port);
+                outToServer = new DataOutputStream( clientSocket.getOutputStream() );
+            }
+            catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    };
+    public Runnable scanRunnable = new Runnable() {
         @Override
         public void run() {
             RssiText.setText(Rssi + "");
             UuidText.setText(Uuid);
             MajorText.setText(Major + "");
             MinorText.setText(Minor + "");
+
+            try {
+                outToServer.writeUTF(Rssi + " " + Uuid + " "  + Major + " "  + Minor );
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
 
             //BTAdapter.startLeScan(leScanCallback);
             //mHandler.postDelayed(this, 2000);
