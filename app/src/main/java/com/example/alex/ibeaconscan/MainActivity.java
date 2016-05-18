@@ -113,10 +113,12 @@ public class MainActivity extends AppCompatActivity implements BeaconConsumer{
             MajorText.setText(Major + "");
             MinorText.setText(Minor + "");
 
-            try {
-                outToServer.writeUTF(Rssi + " " + Uuid + " "  + Major + " "  + Minor );
-            } catch (IOException e) {
-                e.printStackTrace();
+            if(clientSocket.isConnected()) {
+                try {
+                    outToServer.writeUTF(Rssi + " " + Uuid + " " + Major + " " + Minor);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
             }
 
             //BTAdapter.startLeScan(leScanCallback);
