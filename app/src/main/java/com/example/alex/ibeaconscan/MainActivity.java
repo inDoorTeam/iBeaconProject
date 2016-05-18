@@ -5,44 +5,98 @@ import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothManager;
 import android.content.Context;
 import android.os.Handler;
+import android.os.RemoteException;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.widget.TextView;
+import org.altbeacon.beacon.*;
 
-public class MainActivity extends AppCompatActivity {
+import java.util.Collection;
+
+public class MainActivity extends AppCompatActivity implements BeaconConsumer{
+    protected static final String TAG = "MainActivity";
+    private BeaconManager beaconManager;
 
     private BluetoothManager BTManager;
     private BluetoothAdapter BTAdapter = null;
     private TextView RssiText,UuidText,MajorText,MinorText;
     private Handler mHandler;
-
-    public MainActivity() {
-    }
+    private int Rssi, Major, Minor;
+    private String Uuid;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        mHandler = new Handler();
         RssiText = (TextView) findViewById(R.id.RssiText);
         UuidText = (TextView) findViewById(R.id.UuidText);
         MajorText = (TextView) findViewById(R.id.MajorText);
         MinorText = (TextView) findViewById(R.id.MinorText);
-        BTAdapter = BluetoothAdapter.getDefaultAdapter();
-        BTManager = (BluetoothManager)getSystemService(Context.BLUETOOTH_SERVICE);
-        mHandler.post(scanRunnable);
+
+        beaconManager = BeaconManager.getInstanceForApplication(this);
+        beaconManager.getBeaconParsers().add(new BeaconParser().setBeaconLayout("m:2-3=0215,i:4-19,i:20-21,i:22-23,p:24-24"));
+        beaconManager.bind(this);
+
+        mHandler = new Handler();
+        //BTAdapter = BluetoothAdapter.getDefaultAdapter();
+        //BTManager = (BluetoothManager)getSystemService(Context.BLUETOOTH_SERVICE);
+        //mHandler.post(scanRunnable);
+
     }
-    private Runnable scanRunnable = new Runnable()
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        beaconManager.unbind(this);
+    }
+    @Override
+    public void onBeaconServiceConnect() {
+        try {
+            //beaconManager.startMonitoringBeaconsInRegion(new Region("all-beacons-region", null, null, null ));
+            beaconManager.startRangingBeaconsInRegion(new Region("com.example.alex.ibeaconscan", null, null, null ));
+        }
+        catch (RemoteException e) {
+            e.printStackTrace();
+        }
+        //beaconManager.setMonitorNotifier(this);
+        beaconManager.setRangeNotifier(new RangeNotifier() {
+            @Override
+            public void didRangeBeaconsInRegion(Collection<Beacon> beacons, Region region) {
+                if (beacons.size() > 0) {
+                    Beacon beacon = beacons.iterator().next();
+
+                    Rssi = beacon.getRssi();
+                    Uuid = beacon.getId1().toUuidString();
+                    Major = beacon.getId2().toInt();
+                    Minor = beacon.getId3().toInt();
+                    mHandler.post(scanRunnable);
+                }
+
+            }
+        });
+
+    }
+
+
+
+    public Runnable scanRunnable = new Runnable()
     {
         @Override
         public void run() {
-            BTAdapter.startLeScan(leScanCallback);
-            mHandler.postDelayed(this, 5000);
+            RssiText.setText(Rssi + "");
+            UuidText.setText(Uuid);
+            MajorText.setText(Major + "");
+            MinorText.setText(Minor + "");
+
+            //BTAdapter.startLeScan(leScanCallback);
+            //mHandler.postDelayed(this, 2000);
             //BTAdapter.stopLeScan(leScanCallback);
         }
     };
-    private BluetoothAdapter.LeScanCallback leScanCallback = new BluetoothAdapter.LeScanCallback()
+/*
+    public BluetoothAdapter.LeScanCallback leScanCallback = new BluetoothAdapter.LeScanCallback()
     {
         @Override
         public void onLeScan(final BluetoothDevice device, int Rssi, byte[] scanRecord)
@@ -86,8 +140,7 @@ public class MainActivity extends AppCompatActivity {
 
     };
     static final char[] hexArray = "0123456789ABCDEF".toCharArray();
-    private static String bytesToHex(byte[] bytes)
-    {
+    public static String bytesToHex(byte[] bytes) {
         char[] hexChars = new char[bytes.length * 2];
         for ( int j = 0; j < bytes.length; j++ )
         {
@@ -97,4 +150,5 @@ public class MainActivity extends AppCompatActivity {
         }
         return new String(hexChars);
     }
+    */
 }
